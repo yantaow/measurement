@@ -53,17 +53,19 @@ if __name__ == "__main__":
         - \sum_i (\mathtt{hx} S^x_i + \mathtt{hy} S^y_i + \mathtt{hz} S^z_i) \\
         + \sum_i (\mathtt{D} (S^z_i)^2 + \mathtt{E} ((S^x_i)^2 - (S^y_i)^2))
     '''
-    Delta = 3
-    XXZ = SpinChain(model_params={'bc_MPS': 'finite', 'L':4, 'conserve': None, 'Jz': Delta})
+    Delta = 0.2
+    model_params = {
+            'bc_MPS': 'finite',
+            'L': 4,
+            'conserve': None,
+            'Jx': 1,
+            'Jy': 1,
+            'Jz': Delta,
+            }
+    XXZ = SpinChain(model_params=model_params)
     ALs, ARs, ACs, Cs = run_vumps(XXZ, u=u, D=D, verbose=0)
-    check_form(ALs, ARs, ACs, Cs)
-#      W = get_mpo(XXZ)[1]
-#      d  = 2
-#      A0 = normalized_random([d,D,D])
-#      As = [A0] * u
-#      Ws = [W] * u
-#      ALs, ARs, ACs, Cs = normalize(As, verbose=1)
-#      ALs, ARs, ACs, Cs = vumps(Ws, ALs, ARs, Cs, max_iter=max_iter, eps=eps, tol=eps*0.1, verbose=-0)
+    #check_form(ALs, ARs, ACs, Cs)
+
     print("Delta:", 3, "XXZ exact ground energy:", -0.8310204065300439)
 
 
