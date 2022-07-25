@@ -1,0 +1,5 @@
+#!/bin/bash -l 
+export PYTHONPATH=~/Research/Berkeley/TN:~/Research/Berkeley/TN/tenpy
+
+time \
+  python3 run.py 
