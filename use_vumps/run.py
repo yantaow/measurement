@@ -4,6 +4,8 @@ from tenpy.models.spins import SpinChain
 from tenpy.networks.mps import MPS
 from tenpy.algorithms import dmrg
 from tenpy.algorithms.truncation import svd_theta, TruncationError
+from vumps import run_vumps, check_form
+from misc import *
 import matplotlib.pyplot as plt
 
 def run(Jz,chi,mu):
@@ -11,31 +13,41 @@ def run(Jz,chi,mu):
     # chi: bond dimension
     # mu: measurement strength
 
-    d = 2
-    L = 2 # infinite DMRG
+
     print("Jz =" + str(Jz), "chi ="+str(chi), "mu = "+str(mu))
-    model_params = dict(L=L, Jx=1., Jy=1., Jz=Jz, bc_MPS='infinite', conserve='Sz')
-    dmrg_params = {
-        'trunc_params': {
-            'chi_max': chi,
-            'svd_min': 1e-10,
-            'trunc_cut': None
-        },
-        'update_env': 20,
-    #    'start_env': 20,
-        'max_E_err': 0.0001,
-        'max_S_err': 0.0001,
-        'mixer': False,
-        'max_sweeps': 10000,
-        'norm_tol': 1e-4
-    }
-    M = SpinChain(model_params)
+#      d = 2
+#      L = 2 # infinite DMRG
+#      model_params = dict(L=L, Jx=1., Jy=1., Jz=Jz, bc_MPS='infinite', conserve='Sz')
+#      dmrg_params = {
+#          'trunc_params': {
+#              'chi_max': chi,
+#              'svd_min': 1e-10,
+#              'trunc_cut': None
+#          },
+#          'update_env': 20,
+#      #    'start_env': 20,
+#          'max_E_err': 0.0001,
+#          'max_S_err': 0.0001,
+#          'mixer': False,
+#          'max_sweeps': 10000,
+#          'norm_tol': 1e-4
+#      }
+    XXZ = SpinChain(model_params=
+            {'bc_MPS': 'finite',
+             'L':4,
+             'conserve': None,
+             'Jz': Jz,
+             },
+            )
+    N = 2 #unit-cell size
+    d = 2
 
     # initial state fixes total Sz=0 sector
-    psi     = MPS.from_product_state(M.lat.mps_sites(),(["up", "down"] * L)[:L], M.lat.bc_MPS)
-    engine  = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
-    engine.run()
-    psi.canonical_form()
+#      psi     = MPS.from_product_state(M.lat.mps_sites(),(["up", "down"] * L)[:L], M.lat.bc_MPS)
+#      engine  = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
+#      engine.run()
+#      psi.canonical_form()
+    ALs, ARs, ACs, Cs = run_vumps(XXZ, u=N, D=chi, verbose=-1)
 
     P1      = np.array([[0,0],[0,1]]) #up-projector
     P0      = np.array([[1,0],[0,0]]) #down-projector
@@ -46,16 +58,16 @@ def run(Jz,chi,mu):
     M[1]    = np.sqrt(0.5)*(np.cos(mu)-np.sin(mu))*P1 + np.sqrt(0.5)*(np.cos(mu)+np.sin(mu))*P0
 
     # tensors in right canonical form as standard numpy arrays
-    Bs      = np.zeros([L, chi, d, chi])  #[sites, vL, p, vR]
-    for i in range(2):
-        Bs[i] = (psi.get_B(i)).to_ndarray()
+    Bs      = np.zeros([N, chi, d, chi]) * 1.j  #[sites, vL, p, vR]
+    for i in range(N):
+        Bs[i] = ARs[i].transpose([1,0,2])
         canon = np.einsum('iak,jak->ij', Bs[i], Bs[i].conj())
         assert np.max(np.abs(canon-np.identity(chi))) < 1e-10, 'not in right canonical form'
 
     # transfer matrices generating \sum_m p[m]
-    T1      = np.zeros((2, chi**2, chi**2))
+    T1      = np.zeros((2, chi**2, chi**2)) * 1.j
     # transfer matrices generating \sum_m p^2[m]
-    T2      = np.zeros((2, chi**4, chi**4))
+    T2      = np.zeros((2, chi**4, chi**4)) * 1.j
     for i in range(2): # sum over sites
         for j in range(2): # sum over outcomes
             MB    = np.einsum('ab,ibj->iaj', M[j], Bs[i])
@@ -79,7 +91,7 @@ def run(Jz,chi,mu):
     return leadingvals2
 #--------------------------------------
 if __name__ == '__main__':
-    Jz      = 0.2 # anistropy
+    Jz      = 3.0 # anistropy
     chi     = 5 # bond dimension
     mus     = np.linspace(0,np.pi/4,11)
     # here computing leading 3 eigenvalues of T2

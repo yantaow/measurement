@@ -1,0 +1,21 @@
+#!/bin/bash -l 
+
+export PYTHONPATH=~/Research/Berkeley/TN:~/Research/Berkeley/TN/tenpy
+
+time \
+  python3 run.py     \
+  `#seed:`      -1      \
+  `#J:`         -1      \
+  `#g:`         1.5      \
+  `#D:`         5      \
+  `#u:`         4      \
+  `#max_iter:`  1000      \
+  `#eps:`       1e-14  
+
+
+  
+
+
+
+
+# | tee run.out

@@ -79,8 +79,8 @@ def run(Jz,chi,mu):
     return leadingvals2
 #--------------------------------------
 if __name__ == '__main__':
-    Jz      = 0.2 # anistropy
-    chi     = 3 # bond dimension
+    Jz      = 3.0 # anistropy
+    chi     = 5 # bond dimension
     mus     = np.linspace(0,np.pi/4,11)
     # here computing leading 3 eigenvalues of T2
     leadingvals = np.zeros((mus.shape[0],3))

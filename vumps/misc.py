@@ -5,6 +5,23 @@ import scipy.linalg
 import itertools
 import cmath
 
+#----------------------------------------------------------------------------------
+def fix_phase(A):
+    '''
+    fix the phase of the tensor t such that it's largest element (in abs)
+    is real and positive
+    '''
+    reshaped = False
+    if A.ndim > 1:
+        shape = A.shape
+        A = A.reshape([-1])
+        reshaped = True
+    maxA = A[abs(A).argmax()]
+    phase = get_phase(maxA)
+
+    if reshaped:
+        A = A.reshape(shape)
+    return A/phase
 #----------------------------------------------------------------------
 def to_mat(W, row_inds, col_inds):
     return group_legs(W, [row_inds, col_inds])[0]
@@ -30,14 +47,14 @@ def get_gap(psi, phys_inds=[0,1], verbose=0, st=None, n=2, tol=1e-10, sparse=Tru
         if not sparse:
             T = np.tensordot(psi, psi.conj(), [phys_inds, phys_inds])
             T = group_legs(T, [[1,3],[0,2]])[0]
-            w = np.linalg.eigvals(T) 
+            w = np.linalg.eigvals(T)
         if sparse:
             try:
-                def T(S): 
+                def T(S):
                     AS = np.tensordot(A, S, [[2], [0]])
                     ASA = np.tensordot(AS, A.conj(), [[0,2], [0,2]])
                     return ASA
-                def mv(S): 
+                def mv(S):
                     S = S.reshape(A.shape[2], A.shape[2])
                     return T(S)
                 LinearOp = sp.sparse.linalg.LinearOperator((D**2, D**2), matvec=mv)
@@ -46,7 +63,7 @@ def get_gap(psi, phys_inds=[0,1], verbose=0, st=None, n=2, tol=1e-10, sparse=Tru
             except:
                 T = np.tensordot(psi, psi.conj(), [phys_inds, phys_inds])
                 T = group_legs(T, [[1,3],[0,2]])[0]
-                try: 
+                try:
                     print("ues T matrix in get_gap")
                     w = sp.sparse.linalg.eigs(T, k=n, which='LM', tol=tol, \
                             return_eigenvectors=False, maxiter=50)
@@ -58,9 +75,9 @@ def get_gap(psi, phys_inds=[0,1], verbose=0, st=None, n=2, tol=1e-10, sparse=Tru
         if st is not None:
 #              print("T:\n", T)
             print(st+" spectrum  :", np.absolute(eig_T)[0:n])
-    else: 
-        gap = -1 
-    return gap  
+    else:
+        gap = -1
+    return gap
 #------------------------------------------------------------------------------
 def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-5):
     '''
@@ -85,11 +102,11 @@ def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-5):
 
     n = 2
     try:
-        def T(S): 
+        def T(S):
             AS = np.tensordot(A, S, [[2], [0]])
             ASB = np.tensordot(AS, B.conj(), [[0,2], [0,2]])
             return ASB
-        def mv(S): 
+        def mv(S):
             S = S.reshape(A.shape[2], B.shape[2])
             return T(S)
         DA = A.shape[1]
@@ -103,28 +120,28 @@ def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-5):
         w = sp.sparse.linalg.eigs(T, k=n, which='LM', tol=tol, \
                 return_eigenvectors=False, maxiter=50)
     eig_T = sorted(w, key=abs, reverse=True)
-    return  abs(eig_T[0])**2 
+    return  abs(eig_T[0])**2
 #------------------------------------------------------------
-def polar_max(E): 
+def polar_max(E):
     '''argmax_{a isometry} Tr(a E) = (UV)^dag, if E = UsV'''
     assert E.shape[0] <= E.shape[1], "E.shape:{}".format(E.shape)
     U,s,V = svd(E, compute_uv=True, full_matrices=False)
-#      print("Tr(s_E)^2:", sum(s)**2) 
-    return (U@V).conj().T  
+#      print("Tr(s_E)^2:", sum(s)**2)
+    return (U@V).conj().T
 #------------------------------------------------------------
-def polar_max_tensor(E, in_inds=[0], out_inds=[1]): 
+def polar_max_tensor(E, in_inds=[0], out_inds=[1]):
     '''
-    Return argmax_{a isometry} tTr(a,E) as a tensor. 
-    in_inds are incoming indices of a; and out_inds are outgoing 
-    indices of a. 
+    Return argmax_{a isometry} tTr(a,E) as a tensor.
+    in_inds are incoming indices of a; and out_inds are outgoing
+    indices of a.
     '''
-    E, pipe = group_legs(E, [in_inds, out_inds]) 
+    E, pipe = group_legs(E, [in_inds, out_inds])
     a = polar_max(E.T)
     return ungroup_legs(a, pipe)
 #------------------------------------------------------------
 def fill_in(T, index=0, new_dim=4):
     '''
-    Enlarge the leg, T[index], to a new dimension by zero padding. 
+    Enlarge the leg, T[index], to a new dimension by zero padding.
     '''
     inds = list(range(T.ndim))
     inds.pop(index)
@@ -141,10 +158,10 @@ def fill_in(T, index=0, new_dim=4):
 #------------------------------------------------------------
 def fill_out(T, index, new_dim, in_inds=[0,2], out_inds=[1,3]):
     '''
-    Enlarge the outgoing leg, T[index], to a new dimension while keeping isometry. 
-    Enlarge by adding orthogonal complements. 
-    The input index is the slowest index. For the other out indices, the earlier 
-    in out_inds, the slower. 
+    Enlarge the outgoing leg, T[index], to a new dimension while keeping isometry.
+    Enlarge by adding orthogonal complements.
+    The input index is the slowest index. For the other out indices, the earlier
+    in out_inds, the slower.
     '''
     extend = False
     if len(out_inds) == 1:
@@ -158,37 +175,37 @@ def fill_out(T, index, new_dim, in_inds=[0,2], out_inds=[1,3]):
     T, pipe = group_legs(T, [in_inds, [index], out_inds_2])
 
     T_new = T.reshape([T.shape[0], T.shape[1]*T.shape[2]])
-    T_new = add_col_complement(T_new, new_dim*T.shape[2]) 
+    T_new = add_col_complement(T_new, new_dim*T.shape[2])
     T_new = T_new.reshape([T_new.shape[0], new_dim, T.shape[2]])
     T_new = ungroup_legs(T_new, pipe)
 
     if extend:
         orig_shape = T_new.shape[:-1]
         T_new = T_new.reshape(orig_shape)
-    return T_new 
+    return T_new
 
 #------------------------------------------------------------
 def add_col_complement(V, new_dim):
     '''
-    V is an np array matrix. 
-    Return a matrix whose column vectors are add_dim number 
-    of vectors orthogonal to the column vectors in V. 
-    Use modified Gram-Schmidt. 
+    V is an np array matrix.
+    Return a matrix whose column vectors are add_dim number
+    of vectors orthogonal to the column vectors in V.
+    Use modified Gram-Schmidt.
 
     Inserts random vectors in the case of linearly dependent rows."""
     '''
     old_dim = V.shape[1]
-    assert new_dim >= old_dim 
+    assert new_dim >= old_dim
     assert new_dim <= V.shape[0]
 
-    V = V.T 
+    V = V.T
 
     # V[i] = ith column of the isometry
     for k in range(old_dim, new_dim):
         norm = 0
         tt = 1
         while norm < 1e-10:
-            Vk = normalized_random([V.shape[1]]) 
+            Vk = normalized_random([V.shape[1]])
             for j in range(k):
                 Vk = Vk - V[j] * (np.conj(V[j]) @ Vk)
             norm = np.linalg.norm(Vk)
@@ -199,9 +216,9 @@ def add_col_complement(V, new_dim):
 def isofill(A, B, iA, iB, in_inds=[0,2], new_d=None, random=True):
     '''
     A-->--B
-    Enlarge the bond dimension to new_d. 
-    The bond is out for A, and in for B. 
-    in_inds are the in inds of A. 
+    Enlarge the bond dimension to new_d.
+    The bond is out for A, and in for B.
+    in_inds are the in inds of A.
     Optionally, multiply a random unitary on the bond
     '''
     AB_same = id(A) == id(B)
@@ -215,36 +232,36 @@ def isofill(A, B, iA, iB, in_inds=[0,2], new_d=None, random=True):
 
     if new_d > A.shape[iA]:
         out_inds = list(set(list(range(A.ndim))) - set(in_inds))
-        if AB_same: 
+        if AB_same:
             B = fill_in(B, iB, new_d)
             B = fill_out(B, iA, new_d, in_inds, out_inds)
             A = B
         else:
             B = fill_in(B, iB, new_d)
-            A = fill_out(A, iA, new_d, in_inds, out_inds)  
+            A = fill_out(A, iA, new_d, in_inds, out_inds)
 
-    if random: 
+    if random:
         U = random_orthogonal(new_d)
         if AB_same:
-            B = mT(U, B, iB, order='mT') 
-            B = mT(U.T.conj(), B, iA, order='Tm') 
+            B = mT(U, B, iB, order='mT')
+            B = mT(U.T.conj(), B, iA, order='Tm')
             A = B
         else:
-            B = mT(U, B, iB, order='mT')  
+            B = mT(U, B, iB, order='mT')
             A = mT(U.T.conj(), A, iA, order='Tm')
 
     if not AB_same:
         AB_old = np.tensordot(A_old, B_old, [[iA], [iB]])
         AB = np.tensordot(A, B, [[iA], [iB]])
 #          print("dif:", np.linalg.norm(AB-AB_old))
-#          assert np.linalg.norm(AB-AB_old) < 1e-5 
+#          assert np.linalg.norm(AB-AB_old) < 1e-5
 
     return A, B
 #------------------------------------------------------------
-def mT(m, T, iT, order='mT'): 
+def mT(m, T, iT, order='mT'):
     '''
     matrix tensor multiplication
-    The tensor's inds order doesn't change. 
+    The tensor's inds order doesn't change.
     '''
     assert m.ndim == 2
     T_inds = list(range(T.ndim))
@@ -265,7 +282,7 @@ def random_orthogonal(n):
     Q, _ = unique_qr(H)
     return Q
 #------------------------------------------------------------
-def normalized_random(shape, dist='uniform'): 
+def normalized_random(shape, dist='uniform'):
     if dist == 'uniform':
         tensor = np.random.random(shape).real
     elif dist == 'gaussian':
@@ -283,19 +300,20 @@ def to_array(Psi, func=None):
     if func is not None:
         T = [[f(t) for f in func] for t in Psi]
     else:
-        T = Psi.copy() 
+        T = Psi.copy()
     T = np.asarray(T)
     T = np.flip(T, axis=0)
     return T
 #------------------------------------------------------------
 def check_oc(t, contract_axes):
-    l = t.ndim - len(contract_axes) #number of free indices after contraction 
+    l = t.ndim - len(contract_axes) #number of free indices after contraction
     t = np.tensordot(t.conj(), t, axes=[contract_axes, contract_axes])
     if t.ndim > 0:
         t, pipe = group_legs(t, [list(range(0,l)), list(range(l,2*l))])
     else:
         t = np.asarray([t])
-    return np.linalg.norm(t - np.eye(t.shape[0])) / np.sqrt(t.shape[0])
+    return np.linalg.norm(t - np.eye(t.shape[0]))
+#      return np.linalg.norm(t - np.eye(t.shape[0])) / np.sqrt(t.shape[0])
 #------------------------------------------------------------
 def tensor_qr(t, contract_axes):
     #Assuem the input tensor t is tall, i.e. the Q will be isometric
@@ -303,18 +321,18 @@ def tensor_qr(t, contract_axes):
     #contract_axes needs to be sorted
     #Returns Q, R
     #t = Q * R, where Q.shape = t.shape, and Q is isometry when
-    #contracted on contract_axes. 
+    #contracted on contract_axes.
     contract_dims = [t.shape[i] for i in contract_axes]
     free_axes = list(set(list(range(0, t.ndim)))-set(contract_axes))
-    free_dims = [t.shape[i] for i in free_axes]  
+    free_dims = [t.shape[i] for i in free_axes]
     t = t.transpose(contract_axes + free_axes)
     t = t.reshape(np.prod(contract_dims), -1)
     Q, _, R = svd(t)
-#      Q, R = unique_qr(t) 
-    Q = Q.reshape(contract_dims + free_dims) 
+#      Q, R = unique_qr(t)
+    Q = Q.reshape(contract_dims + free_dims)
     R = R.reshape(free_dims + free_dims)
     Q = Q.transpose(invertseq(contract_axes + free_axes))
-    return Q, R  
+    return Q, R
 #------------------------------------------------------------
 def invertseq(s):
     n = len(s)
@@ -351,7 +369,7 @@ def qr_trunc(theta, D):
         R = R[:D, :]
     R_perm = R[:, invertseq(P)]
     R_perm = R_perm/np.linalg.norm(R_perm)
-    p_trunc = scipy.linalg.norm(theta-Q.dot(R_perm))**2 
+    p_trunc = scipy.linalg.norm(theta-Q.dot(R_perm))**2
 
     info = {'p_trunc': p_trunc, 'nrm':1}
     return Q, R_perm, info
@@ -361,7 +379,7 @@ def unique_qr(A):
     phase = np.diag([get_phase(r) for r in np.diag(R)])
     phase_inv = np.diag([get_phase(r) for r in np.diag(R)])
 
-    Q = Q @ phase 
+    Q = Q @ phase
     R = phase_inv @ R
     assert np.linalg.norm(Q@R- A) < 1e-10
     return Q, R
@@ -371,7 +389,7 @@ def make_U(H, t):
     #H[0][0] = h1 -- a 4-leg tensor
     d = H[0][0].shape[0]
     return [[
-        sp.linalg.expm(-t * h.reshape((d**2, -1))).reshape([d] * 4) 
+        sp.linalg.expm(-t * h.reshape((d**2, -1))).reshape([d] * 4)
         for h in Hc] for Hc in H]
 #------------------------------------------------------------
 ###Tensor stuff
@@ -449,7 +467,7 @@ def svd(theta, compute_uv=True, full_matrices=False, fix_gauge=True):
                              full_matrices=full_matrices,
                              lapack_driver='gesvd')
     if fix_gauge:
-        maxV = [v[abs(v).argmax()] for v in Vh] 
+        maxV = [v[abs(v).argmax()] for v in Vh]
         phase = [1/get_phase(r) for r in maxV]
         phase_inv = [1./p for p in phase]
         phase = np.diag(phase)
@@ -462,11 +480,11 @@ def svd(theta, compute_uv=True, full_matrices=False, fix_gauge=True):
 #------------------------------------------------------------
 def hosvd(Psi, mode='svd'):
     """Higher order SVD. Given rank-l wf Psi, computes Schmidt spectrum Si on each leg-i, as well as the unitaries Ui
-	
+
 		Psi = U1 U2 ... Ul X
-	
+
 		Returns X, U, S, the latter two as lists of arrays
-	
+
 	"""
     l = Psi.ndim
 
@@ -502,7 +520,7 @@ def hosvd(Psi, mode='svd'):
 
     return Psi, U, S
 #------------------------------------------------------------
-def random_diag(l):  
+def random_diag(l):
     return np.diag(2*np.random.randint(0,2,l)-1)
 #------------------------------------------------------------
 def svd_theta_UsV(theta, eta, p_trunc=0., verbose=False, random=False):
@@ -518,7 +536,7 @@ def svd_theta_UsV(theta, eta, p_trunc=0., verbose=False, random=False):
     if random:
         #A=UsV=(U*D)s(D^\dag V), where D=diag(e^(i*phi1), e^(i*phi2),...)
         D = random_diag(len(s))
-        U = U @ D 
+        U = U @ D
         V = D.conj() @ V
 
     pcum = np.cumsum(s**2)
@@ -565,14 +583,14 @@ def svd_theta(theta, truncation_par=None, form='A-SB', verbose=False):
         #diagflat(a,b) @ ((c,d),(e,f)) = ((a,0),(0,b)) @ ((c,d),(e,f)) = ((ac,ad),(be,bf))
         #=((c,d),(e,f))*((a,a),(b,b)) = ((c,d),(e,f))*(a,b) [with broadcasting]
     elif form == 'AS-B':
-        left = U[:, :eta_new] * s[:eta_new]/nrm_t 
+        left = U[:, :eta_new] * s[:eta_new]/nrm_t
         right = V[:eta_new, :]
     info = {
         'p_trunc': nrm**2 - nrm_t**2,
         's': s,
         'nrm': nrm,
-        'eta': eta_new, 
-        'entropy': renyi(s, 1) 
+        'eta': eta_new,
+        'entropy': renyi(s, 1)
     }
 
     return left, right, info
@@ -602,15 +620,15 @@ def random_isometry(shape, contract_axes, dtype=np.float64):
     if dtype in [np.complex, np.complex64, np.complex128]:
         rand_matrix = rand_matrix + 1j * np.random.random(shape)
     Q, R = tensor_qr(rand_matrix, contract_axes)
-    return Q 
+    return Q
 #-------------------------------------------------------------------------------
 def get_QR_limit(psi, tol=1e-15, verbose=0):
     '''
-      ---0   1---psi---2     ---  
-      |           |          |   
-      l           |       =  l   
-      |           |          |   
-      ---1   1---psi---2     --- 
+      ---0   1---psi---2     ---
+      |           |          |
+      l           |       =  l
+      |           |          |
+      ---1   1---psi---2     ---
 
     return S, where SS^dag = l
     '''
@@ -618,13 +636,13 @@ def get_QR_limit(psi, tol=1e-15, verbose=0):
         psi = [psi]
     assert psi[0].shape[1] == psi[-1].shape[2]
 
-    N = len(psi) 
+    N = len(psi)
     D = psi[0].shape[1]
-    try: 
-        def mv(l): 
+    try:
+        def mv(l):
             l = l.reshape([D,D])
-            for n in range(N): 
-                l_psi = np.tensordot(l, psi[n], [[0],[1]]) 
+            for n in range(N):
+                l_psi = np.tensordot(l, psi[n], [[0],[1]])
                 l = np.tensordot(l_psi, psi[n].conj(), [[0,1],[1,0]])
             return l.reshape([D**2])
         LinOp = sp.sparse.linalg.LinearOperator((D**2, D**2), matvec=mv)
@@ -637,15 +655,15 @@ def get_QR_limit(psi, tol=1e-15, verbose=0):
         T = Ts[0]
         for n in range(1, N):
             T = T @ Ts[n]
-        w, v = sp.sparse.linalg.eigs(T, k=1, which='LM', 
+        w, v = sp.sparse.linalg.eigs(T, k=1, which='LM',
                 tol=tol, return_eigenvectors=True)
     #w, v = np.linalg.eig(T)
     eig_T = sorted(w, key=abs, reverse=True)
-    sort_index = np.argsort(np.absolute(w))[::-1] 
+    sort_index = np.argsort(np.absolute(w))[::-1]
     l = ((v.T)[sort_index]).T[:,0]
     l = l.reshape([psi[0].shape[1], psi[0].shape[1]])
 
-    max_element = np.diag(l)[abs(np.diag(l)).argmax()] 
+    max_element = np.diag(l)[abs(np.diag(l)).argmax()]
     phase = np.exp(cmath.phase(max_element)*1.j)
     l = l/phase
 
@@ -654,15 +672,15 @@ def get_QR_limit(psi, tol=1e-15, verbose=0):
     #l= a*l1+b*l2 not= S S^dag for any S
     try:
         S = np.linalg.cholesky(l).T
-        return S/np.linalg.norm(S), np.sqrt(eig_T[0].real) 
+        return S/np.linalg.norm(S), np.sqrt(eig_T[0].real)
     except:
         print("Add small I to do Cholesky in get_QR_limit")
         try:
             l = l + np.eye(l.shape[0])*1e-14
             S = np.linalg.cholesky(l).T
-            return S/np.linalg.norm(S), np.sqrt(eig_T[0].real) 
+            return S/np.linalg.norm(S), np.sqrt(eig_T[0].real)
         except:
             print("cholesy failed...return a random S")
-            return normalized_random(l.shape), np.sqrt(eig_T[0].real) 
-        #eig_T[0] should be real, even for complex psi. 
+            return normalized_random(l.shape), np.sqrt(eig_T[0].real)
+        #eig_T[0] should be real, even for complex psi.
 
