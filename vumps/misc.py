@@ -37,46 +37,33 @@ def get_gap(psi, phys_inds=[0,1], verbose=0, st=None, n=2, tol=1e-10, sparse=Tru
            |        |
         1--A--2  ---|
     '''
+    assert isinstance(psi, list)
+    if not isinstance(psi, list):
+        psi = [psi]
+    num_p = psi[0].ndim - 2
+    phys_inds = list(range(num_p))
     grouping = [phys_inds, [len(phys_inds)], [len(phys_inds)+1]]
-    A = group_legs(psi, grouping)[0]
-    D = A.shape[1]
-    if n > D**2 or n < 0:
-        n = D**2
-    DD = A.shape[2]
-    if D == DD and D**2 >= 2:
-        if not sparse:
-            T = np.tensordot(psi, psi.conj(), [phys_inds, phys_inds])
-            T = group_legs(T, [[1,3],[0,2]])[0]
-            w = np.linalg.eigvals(T)
-        if sparse:
-            try:
-                def T(S):
-                    AS = np.tensordot(A, S, [[2], [0]])
-                    ASA = np.tensordot(AS, A.conj(), [[0,2], [0,2]])
-                    return ASA
-                def mv(S):
-                    S = S.reshape(A.shape[2], A.shape[2])
-                    return T(S)
-                LinearOp = sp.sparse.linalg.LinearOperator((D**2, D**2), matvec=mv)
-                w = sp.sparse.linalg.eigs(LinearOp, k=n, which='LM', tol=tol, \
-                        return_eigenvectors=False, maxiter=50)
-            except:
-                T = np.tensordot(psi, psi.conj(), [phys_inds, phys_inds])
-                T = group_legs(T, [[1,3],[0,2]])[0]
-                try:
-                    print("ues T matrix in get_gap")
-                    w = sp.sparse.linalg.eigs(T, k=n, which='LM', tol=tol, \
-                            return_eigenvectors=False, maxiter=50)
-                except:
-                    print("use ED in get_gap")
-                    w = sp.linalg.eigvals(T)
-        eig_T = sorted(w, key=abs, reverse=True)
-        gap = abs(eig_T[0]) - abs(eig_T[1])
-        if st is not None:
-#              print("T:\n", T)
-            print(st+" spectrum  :", np.absolute(eig_T)[0:n])
-    else:
-        gap = -1
+    psi = [group_legs(t, grouping)[0] for t in psi]
+
+    N = len(psi)
+    D = psi[0].shape[1]
+    try:
+        def mv(l):
+            l = l.reshape([D,D])
+            for i in range(N):
+                l_psi = np.tensordot(l, psi[i], [[0],[1]])
+                l = np.tensordot(l_psi, psi[i].conj(), [[0,1],[1,0]])
+            return l.reshape([D**2])
+        LinOp = sp.sparse.linalg.LinearOperator((D**2, D**2), matvec=mv)
+        w = sp.sparse.linalg.eigs(LinOp, k=n, which='LM', tol=tol, return_eigenvectors=False)
+    except:
+        print("exception in get_gap")
+        return -1
+
+    eig_T = sorted(w, key=abs, reverse=True)
+    gap = abs(eig_T[0]) - abs(eig_T[1])
+    if st is not None:
+        print(st+" spectrum  :", np.absolute(eig_T)[0:n])
     return gap
 #------------------------------------------------------------------------------
 def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-5):

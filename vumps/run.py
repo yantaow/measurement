@@ -53,7 +53,7 @@ if __name__ == "__main__":
         - \sum_i (\mathtt{hx} S^x_i + \mathtt{hy} S^y_i + \mathtt{hz} S^z_i) \\
         + \sum_i (\mathtt{D} (S^z_i)^2 + \mathtt{E} ((S^x_i)^2 - (S^y_i)^2))
     '''
-    Delta = 0.2
+    Delta = 3.0
     model_params = {
             'bc_MPS': 'finite',
             'L': 4,
@@ -63,7 +63,9 @@ if __name__ == "__main__":
             'Jz': Delta,
             }
     XXZ = SpinChain(model_params=model_params)
-    ALs, ARs, ACs, Cs = run_vumps(XXZ, u=u, D=D, verbose=0)
+    ALs, ARs, ACs, Cs = run_vumps(XXZ, u=u, D=D, eps=eps, verbose=0)
+    measure(ACs, [[1,0],[0,-1]], verbose=1)
+    get_gap(ALs, st='ALs')
     #check_form(ALs, ARs, ACs, Cs)
 
     print("Delta:", 3, "XXZ exact ground energy:", -0.8310204065300439)

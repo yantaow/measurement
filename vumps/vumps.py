@@ -524,7 +524,6 @@ def vumps(Ws, ALs, ARs, ACs, Cs, max_iter=100, eps=1e-15, tol=1e-15, verbose=-1)
                 print("t_split:", t3-t2)
         error = max(errors)
         if verbose >= 0:
-            print("-"*40)
             print("error  :", error)
             print("eps_L  :", eps_L)
             print("eps_R  :", eps_R)

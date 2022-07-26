@@ -34,7 +34,8 @@ def run(Jz,chi,mu):
     # initial state fixes total Sz=0 sector
     psi     = MPS.from_product_state(M.lat.mps_sites(),(["up", "down"] * L)[:L], M.lat.bc_MPS)
     engine  = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
-    engine.run()
+    E, _    = engine.run()
+    print('GS energy:', E)
     psi.canonical_form()
 
     P1      = np.array([[0,0],[0,1]]) #up-projector
@@ -79,7 +80,7 @@ def run(Jz,chi,mu):
     return leadingvals2
 #--------------------------------------
 if __name__ == '__main__':
-    Jz      = 3.0 # anistropy
+    Jz      = 0.2 # anistropy
     chi     = 5 # bond dimension
     mus     = np.linspace(0,np.pi/4,11)
     # here computing leading 3 eigenvalues of T2

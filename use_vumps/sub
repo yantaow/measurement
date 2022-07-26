@@ -1,5 +1,17 @@
 #!/bin/bash -l 
-export PYTHONPATH=~/Research/Berkeley/TN:~/Research/Berkeley/TN/tenpy:~/Research/Berkeley/TN/measurement/vumps 
+
+export PYTHONPATH=~/Research/Berkeley/TN:~/Research/Berkeley/TN/tenpy:~/Research/Berkeley/TN/measurement/vumps
 
 time \
-  python3 run.py 
+  python3 run.py     \
+  `#seed:`      63      \
+  `#D:`         2      \
+  `#u:`         1      
+
+
+  
+
+
+
+
+# | tee run.out
