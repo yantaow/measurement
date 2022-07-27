@@ -23,61 +23,6 @@ from misc import *
 import matplotlib.pyplot as plt
 import copy
 
-def measurement_entropy(ARs, mu):
-    '''
-    ARs: Ground state MPS tensors, in the right canonical form
-    mu : measurement strength
-    '''
-    N = len(ARs) #unit-cell size
-    d = ARs[0].shape[0]
-
-    P1      = np.array([[0,0],[0,1]]) #up-projector
-    P0      = np.array([[1,0],[0,0]]) #down-projector
-    # measurement operators
-    M = np.zeros([d, d, d])
-    # mu = pi/4 corresponds to a projective measurement
-    M[0]    = np.sqrt(0.5)*(np.cos(mu)+np.sin(mu))*P1 + np.sqrt(0.5)*(np.cos(mu)-np.sin(mu))*P0
-    M[1]    = np.sqrt(0.5)*(np.cos(mu)-np.sin(mu))*P1 + np.sqrt(0.5)*(np.cos(mu)+np.sin(mu))*P0
-
-    # tensors in right canonical form as standard numpy arrays
-    Bs      = np.zeros([N, chi, d, chi]) * 1.j  #[sites, vL, p, vR]
-    for i in range(N):
-        Bs[i] = ARs[i].transpose([1,0,2])
-#          canon = np.einsum('iak,jak->ij', Bs[i], Bs[i].conj())
-#          assert np.max(np.abs(canon-np.identity(chi))) < 1e-10, 'not in right canonical form'
-
-    # transfer matrices generating \sum_m p[m]
-    T1      = np.zeros([N, chi**2, chi**2]) * 1.j
-    # transfer matrices generating \sum_m p^2[m]
-    T2      = np.zeros([N, chi**4, chi**4]) * 1.j
-    for i in range(N): # sum over sites
-        for j in range(d): # sum over outcomes
-            MB    = np.einsum('ab,ibj->iaj', M[j], Bs[i])
-            BMMB  = np.einsum('iaj,kal->ikjl',np.conj(MB),MB)
-            flatBMMB = BMMB.reshape([chi**2,chi**2])
-            T1[i] += flatBMMB
-            T2[i] += np.kron(flatBMMB,flatBMMB)
-    # transfer matrices for two-site unit cell
-    T1cell = T1[0]
-    T2cell = T2[0]
-    for i in range(1, N):
-        T1cell = T1cell @ T1[i]
-        T2cell = T2cell @ T2[i]
-    print('|T2.imag|:', np.linalg.norm(T2cell.imag))
-
-
-    # if the measurements are a channel, leading eigenvalue of T1cell is unity
-    w1, v1  = np.linalg.eig(T1cell)
-#      print('w1:', sorted(w1, key=abs, reverse=True)[:4])
-    assert np.abs(1-w1[np.argmax(np.abs(w1))]) < 1e-10, 'measurements not a channel'
-
-    # get spectrum of T2 (which has lots of symmetries I am not yet using)
-    w2, v2 = np.linalg.eig(T2cell)
-#      print('T2cell:\n', T2cell)
-    # N.B. leading w2 = 1/4 for mu=0
-    # return leading 3 eigenvalues of T2
-    return sorted(w2, key=abs, reverse=True)[:4]
-
 #--------------------------------------
 seed    = int(sys.argv[1])
 chi     = int(sys.argv[2])
@@ -89,10 +34,7 @@ print("seed:", seed)
 np.random.seed(seed)
 #--------------------------------------
 if __name__ == '__main__':
-
-
-    L = 1000
-
+    L = 200
 
     A = np.zeros([2,1,1])
     A[0,0,0] = 1/np.sqrt(2)
@@ -109,9 +51,8 @@ if __name__ == '__main__':
         ALs.append(copy.deepcopy(AL))
     cmps = ColumnMPS(list_tensor=ALs)
 
-
-
-    AL0 = fill_out(A, 2, 2, in_inds=[0,1], out_inds=[2])
+    #AL0 = fill_out(A, 2, 2, in_inds=[0,1], out_inds=[2])
+    AL0 = random_isometry([2,1,2], [0,1])
     cmps[0] = AL0
 
     cmps1 = cmps.copy()
@@ -126,7 +67,7 @@ if __name__ == '__main__':
 
     r2 = np.zeros([2,1])
     r2[0,0] = 0
-    r2[1,0] = b
+    r2[1,0] = 1
     cmps2[-1] = mT(r2, cmps2[-1], 2, order='Tm')
 
     print('<1|1>:', cmps1.overlap(cmps1.copy()))
@@ -134,8 +75,9 @@ if __name__ == '__main__':
     print('<1|2>:', cmps1.overlap(cmps2.copy()))
     print('<X|1>:', cmps_X.overlap(cmps1.copy()))
     print('<X|2>:', cmps_X.overlap(cmps2.copy()))
-    cmps1.onept_rdm(L//2)
-    cmps2.onept_rdm(L//2)
+    cmps1.twopt_rdm(L//2, L//2+1)
+    cmps2.twopt_rdm(L//2, L//2+1)
+    cmps_X.twopt_rdm(L//2, L//2+1)
 
 
 

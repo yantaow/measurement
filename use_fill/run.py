@@ -151,4 +151,4 @@ if __name__ == '__main__':
         plt.plot(mus, abs(ws[:,i]),color=colors[i])
     plt.xlabel(r'$\mu$')
     plt.ylabel(r'$\lambda$')
-    #plt.show()
+    plt.show()
