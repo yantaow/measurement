@@ -37,7 +37,6 @@ def get_gap(psi, phys_inds=[0,1], verbose=0, st=None, n=2, tol=1e-10, sparse=Tru
            |        |
         1--A--2  ---|
     '''
-    assert isinstance(psi, list)
     if not isinstance(psi, list):
         psi = [psi]
     num_p = psi[0].ndim - 2
@@ -57,8 +56,11 @@ def get_gap(psi, phys_inds=[0,1], verbose=0, st=None, n=2, tol=1e-10, sparse=Tru
         LinOp = sp.sparse.linalg.LinearOperator((D**2, D**2), matvec=mv)
         w = sp.sparse.linalg.eigs(LinOp, k=n, which='LM', tol=tol, return_eigenvectors=False)
     except:
-        print("exception in get_gap")
-        return -1
+        T = group_legs(np.tensordot(psi[0], psi[0].conj(), [[0],[0]]), [[0,2],[1,3]])[0]
+        for i in range(1, N):
+            T1 = group_legs(np.tensordot(psi[i], psi[i].conj(), [[0],[0]]), [[0,2],[1,3]])[0]
+            T = T @ T1
+        w, v = np.linalg.eig(T)
 
     eig_T = sorted(w, key=abs, reverse=True)
     gap = abs(eig_T[0]) - abs(eig_T[1])
@@ -66,7 +68,7 @@ def get_gap(psi, phys_inds=[0,1], verbose=0, st=None, n=2, tol=1e-10, sparse=Tru
         print(st+" spectrum  :", np.absolute(eig_T)[0:n])
     return gap
 #------------------------------------------------------------------------------
-def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-5):
+def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-15):
     '''
     A, B is grouped such that
         1--A--2  ---|
@@ -77,17 +79,16 @@ def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-5):
            |        |
         1--B--2  ---|
     '''
-    grouping = [A_pinds, [len(A_pinds)], [len(A_pinds)+1]]
+    num_p = A.ndim - 2
+    phys_inds = list(range(num_p))
+    grouping = [phys_inds, [len(phys_inds)], [len(phys_inds)+1]]
     A = group_legs(A, grouping)[0]
-
-    grouping = [B_pinds, [len(B_pinds)], [len(B_pinds)+1]]
     B = group_legs(B, grouping)[0]
     assert A.shape[1] == A.shape[2] and B.shape[1] == B.shape[2]
-
 #      print("A.shape:", A.shape)
 #      print("B.shape:", B.shape)
 
-    n = 2
+    n = 1
     try:
         def T(S):
             AS = np.tensordot(A, S, [[2], [0]])
@@ -102,7 +103,7 @@ def get_fidelity(A, B, A_pinds=[0,1], B_pinds=[0,1], tol=1e-5):
         w = sp.sparse.linalg.eigs(LinearOp, k=n, which='LM', tol=tol, \
                 return_eigenvectors=False, maxiter=50)
     except:
-        T = np.tensordot(A, B.conj(), [A_pinds, B_pinds])
+        T = np.tensordot(A, B.conj(), [[0],[0]])
         T = group_legs(T, [[1,3],[0,2]])[0]
         w = sp.sparse.linalg.eigs(T, k=n, which='LM', tol=tol, \
                 return_eigenvectors=False, maxiter=50)

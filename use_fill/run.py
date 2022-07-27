@@ -41,8 +41,8 @@ def measurement_entropy(ARs, mu):
     Bs      = np.zeros([N, chi, d, chi]) * 1.j  #[sites, vL, p, vR]
     for i in range(N):
         Bs[i] = ARs[i].transpose([1,0,2])
-        canon = np.einsum('iak,jak->ij', Bs[i], Bs[i].conj())
-        assert np.max(np.abs(canon-np.identity(chi))) < 1e-10, 'not in right canonical form'
+#          canon = np.einsum('iak,jak->ij', Bs[i], Bs[i].conj())
+#          assert np.max(np.abs(canon-np.identity(chi))) < 1e-10, 'not in right canonical form'
 
     # transfer matrices generating \sum_m p[m]
     T1      = np.zeros([N, chi**2, chi**2]) * 1.j
@@ -71,6 +71,7 @@ def measurement_entropy(ARs, mu):
 
     # get spectrum of T2 (which has lots of symmetries I am not yet using)
     w2, v2 = np.linalg.eig(T2cell)
+#      print('T2cell:\n', T2cell)
     # N.B. leading w2 = 1/4 for mu=0
     # return leading 3 eigenvalues of T2
     return sorted(w2, key=abs, reverse=True)[:4]
@@ -93,30 +94,34 @@ if __name__ == '__main__':
         - \sum_i (\mathtt{hx} S^x_i + \mathtt{hy} S^y_i + \mathtt{hz} S^z_i) \\
         + \sum_i (\mathtt{D} (S^z_i)^2 + \mathtt{E} ((S^x_i)^2 - (S^y_i)^2))
     '''
-
-    model_params = {
-            'bc_MPS': 'finite',
-            'L': 4,
-            'conserve': None,
-            'Jx': -1,
-            'Jy': 0,
-            'Jz': 0,
-            'hx': 0,
-            'hy': 0,
-            }
-    model = SpinChain(model_params=model_params)
-#      model_params = {
-#              'bc_MPS': 'finite',
-#              'L': 4,
-#              'conserve': None,
-#              'J': 1,
-#              'g': 0.5,
-#              }
-#      model = TFIChain(model_params=model_params)
-
+#      np.set_printoptions(linewidth=10000)
+#      A = np.zeros([2,1,1])
+#      A[0,0,0] = 1/np.sqrt(2)
+#      A[1,0,0] = 1/np.sqrt(2)
+#      l = 1
+#      r = 1
+#      A1 = np.zeros([2,chi,chi])
+#      A1[:, :l, :r] = A
+#      A1[:,l:,:r] = np.random.random(A1[:,l:,:r].shape)
+#      A1[:,:, r:] = np.zeros(A1[:,:, r:].shape)
+#      ALs, ARs, ACs, Cs = normalize([A1], verbose=True)
 
     np.set_printoptions(linewidth=10000)
-    ALs, ARs, ACs, Cs = run_vumps(model, u=u, D=chi, eps=1e-12, verbose=-1)
+    A = np.zeros([2,1,1])
+    A[0,0,0] = 1/np.sqrt(2)
+    A[1,0,0] = 1/np.sqrt(2)
+    ALs, ARs, ACs, Cs = normalize([A])
+    rdm = np.tensordot(ACs[0], ACs[0].conj(), [[1,2],[1,2]])
+    print('rdm:\n', rdm)
+    print('ALs[0]:\n', ALs[0][0,:,:])
+    print('ALs[1]:\n', ALs[0][1,:,:])
+
+    AL, _ = isofill(ALs[0], ALs[0], 2, 1, in_inds=[0,1], new_d=chi, random=False)
+    #ALs[0] = AL
+    ALs, ARs, ACs, Cs = normalize([AL])
+    np.save('AL', ALs[0])
+
+
     X = np.zeros([2, 1, 1])
     X[0,0,0] = 1/np.sqrt(2)
     X[1,0,0] = 1/np.sqrt(2)
@@ -129,14 +134,14 @@ if __name__ == '__main__':
     measure(ACs, [[0,1],[1,0]], verbose=1)
     measure(ACs, [[0,-1.j],[1.j,0]], verbose=1)
     measure(ACs, [[1,0],[0,-1]], verbose=1)
-    get_gap(ALs, st='ALs')
+    get_gap(ALs, st='ALs', n=5)
 
 
     mus = np.linspace(0,np.pi/4,11)
     ws = np.zeros([mus.shape[0], 4]) * 1.j
 
     for i in range(mus.shape[0]):
-        ws[i] = measurement_entropy(ARs, mus[i])
+        ws[i] = measurement_entropy(ALs, mus[i])
         assert ws[i][0].imag < 1e-10
         ws[i][0] = ws[i][0].real
         print('i {0:<2}'.format(i), 'lambda:', ws[i], 'S2:', 1/(1-2)*np.log(ws[i][0]).real)
@@ -146,4 +151,4 @@ if __name__ == '__main__':
         plt.plot(mus, abs(ws[:,i]),color=colors[i])
     plt.xlabel(r'$\mu$')
     plt.ylabel(r'$\lambda$')
-    plt.show()
+    #plt.show()
