@@ -24,8 +24,48 @@ import matplotlib.pyplot as plt
 import copy
 
 #--------------------------------------
+def measurement_entropy(cmps, mu):
+    '''
+    As : Ground state MPS tensors, in the right canonical form
+    mu : measurement strength
+    '''
+    L = len(cmps) #unit-cell size
+    d = cmps[0].shape[0]
+
+    P1      = np.array([[0,0],[0,1]]) #up-projector
+    P0      = np.array([[1,0],[0,0]]) #down-projector
+
+    M = np.zeros([d, d, d])     # measurement operators
+    # mu = pi/4 corresponds to a projective measurement
+    M[0]    = np.sqrt(0.5)*(np.cos(mu)+np.sin(mu))*P1 + np.sqrt(0.5)*(np.cos(mu)-np.sin(mu))*P0
+    M[1]    = np.sqrt(0.5)*(np.cos(mu)-np.sin(mu))*P1 + np.sqrt(0.5)*(np.cos(mu)+np.sin(mu))*P0
+
+
+    assert cmps[0].shape[1] == 1
+    T1_all = np.eye(1)
+    T2_all = np.eye(1)
+
+    for i in range(L): # sum over sites
+        D_l = cmps[i].shape[1]
+        D_r = cmps[i].shape[2]
+        T1      = np.zeros([D_l**2, D_r**2]) * 1.j
+        T2      = np.zeros([D_l**4, D_r**4]) * 1.j
+        for s in range(d): # sum over outcomes
+            MB    = mT(M[s], cmps[i], 0, order='mT')
+            T  = np.tensordot(MB, MB.conj(), [[0], [0]])
+            T, _ = group_legs(T, [[0,2],[1,3]])
+            T1 += T
+            T2 += np.kron(T, T)
+        T1_all = T1_all @ T1
+        T2_all = T2_all @ T2
+
+#      print('T1_all:', T1_all)
+#      print('T2_all:', T2_all)
+
+    return -1 * np.log2(T2_all[0][0])/L
+#--------------------------------------
 seed    = int(sys.argv[1])
-chi     = int(sys.argv[2])
+D     = int(sys.argv[2])
 u       = int(sys.argv[3])
 
 if seed < 0:
@@ -79,20 +119,17 @@ if __name__ == '__main__':
     cmps2.twopt_rdm(L//2, L//2+1)
     cmps_X.twopt_rdm(L//2, L//2+1)
 
+    mus = np.linspace(0,np.pi/4,110)
+    ws = np.zeros([mus.shape[0], 4]) * 1.j
+    Ss = []
+    for i in range(mus.shape[0]):
+        S = measurement_entropy(cmps1, mus[i])
+        assert S.imag < 1e-10
+        print('i {0:<2}'.format(i), 'S2:', S)
+        Ss.append(S.real)
 
-
-#      mus = np.linspace(0,np.pi/4,11)
-#      ws = np.zeros([mus.shape[0], 4]) * 1.j
-#
-#      for i in range(mus.shape[0]):
-#          ws[i] = measurement_entropy(ALs, mus[i])
-#          assert ws[i][0].imag < 1e-10
-#          ws[i][0] = ws[i][0].real
-#          print('i {0:<2}'.format(i), 'lambda:', ws[i], 'S2:', 1/(1-2)*np.log(ws[i][0]).real)
-#          # print('i {0:<2}'.format(i), 'lambda:', ws[i], '2nd-3rd:', abs(ws[i][1]-ws[i][2]))
-#      colors = ['r','g','b','k']
-#      for i in range(4):
-#          plt.plot(mus, abs(ws[:,i]),color=colors[i])
-#      plt.xlabel(r'$\mu$')
-#      plt.ylabel(r'$\lambda$')
-    #plt.show()
+    colors = ['r','g','b','k']
+    plt.plot(mus, Ss, color=colors[0])
+    plt.xlabel(r'$\mu$')
+    plt.ylabel(r'$\lambda$')
+    plt.show()
