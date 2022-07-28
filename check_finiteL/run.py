@@ -46,29 +46,54 @@ def measurement_entropy(cmps, mu, n=2):
     T1_all = np.eye(1)
     Tn_all = np.eye(1)
 
+    l = 0
+    accum = 0
     for i in range(L): # sum over sites
         D_l = cmps[i].shape[1]
         D_r = cmps[i].shape[2]
         T1      = np.zeros([D_l**2, D_r**2]) * 1.j
         Tn      = np.zeros([D_l**(2*n), D_r**(2*n)]) * 1.j
-        for s in range(d): # sum over outcomes
-            MB    = mT(M[s], cmps[i], 0, order='mT')
+#          if i > L//4 and i < 3*L//4:
+#          if i > -1 and i < L:
+#          if i > 3*L//4:
+#          if i < L * 0.3:
+        if i < L-10:
+            l += 1
+            for s in range(d): # sum over outcomes
+                MB    = mT(M[s], cmps[i], 0, order='mT')
+                T  = np.tensordot(MB, MB.conj(), [[0], [0]])
+                T, _ = group_legs(T, [[0,2],[1,3]])
+                T1 += T
+                if n == 2:
+                    Tn += np.kron(T, T)
+                elif n == 3:
+                    Tn += np.kron(T, np.kron(T, T))
+                else:
+                    raise NotImplementedError
+        else:
+            MB    = cmps[i]
             T  = np.tensordot(MB, MB.conj(), [[0], [0]])
             T, _ = group_legs(T, [[0,2],[1,3]])
-            T1 += T
+            T1 = T
             if n == 2:
-                Tn += np.kron(T, T)
+                Tn = np.kron(T, T)
             elif n == 3:
-                Tn += np.kron(T, np.kron(T, T))
+                Tn = np.kron(T, np.kron(T, T))
             else:
                 raise NotImplementedError
+
         T1_all = T1_all @ T1
         Tn_all = Tn_all @ Tn
 
+        f = np.amax(abs(Tn_all))
+        Tn_all = Tn_all/f
+        accum += np.log2(f)
+#          print('f:', f)
+#          print('Tn_all:\n', Tn_all)
+#          print('accum:', accum/l)
 #      print('T1_all:', T1_all)
 #      print('T2_all:', T2_all)
-
-    return 1/(1-n) * np.log2(Tn_all[0][0])/L
+    return 1/(1-n) * (np.log2(Tn_all[0][0]) + accum)/l
 #--------------------------------------
 def probability(cmps, mu, s='random'):
     '''
@@ -133,8 +158,8 @@ if __name__ == '__main__':
         ALs.append(copy.deepcopy(AL))
     cmps = ColumnMPS(list_tensor=ALs)
 
-    AL0 = fill_out(A, 2, 2, in_inds=[0,1], out_inds=[2])
-    #AL0 = random_isometry([2,1,2], [0,1])
+    #AL0 = fill_out(A, 2, 2, in_inds=[0,1], out_inds=[2])
+    AL0 = random_isometry([2,1,2], [0,1])
     cmps[0] = AL0
 
     cmps1 = cmps.copy()
@@ -143,36 +168,35 @@ if __name__ == '__main__':
     a = 1/np.sqrt(2)
     b = 1/np.sqrt(2)
     r1 = np.zeros([2,1])
-    r1[0,0] = 0
-    r1[1,0] = 1
+    r1[0,0] = a
+    r1[1,0] = b
     cmps1[-1] = mT(r1, cmps1[-1], 2, order='Tm')
 
     r2 = np.zeros([2,1])
     r2[0,0] = a
     r2[1,0] = b
     cmps2[-1] = mT(r2, cmps2[-1], 2, order='Tm')
-
     print('<1|1>:', cmps1.overlap(cmps1.copy()))
     print('<2|2>:', cmps2.overlap(cmps2.copy()))
     print('<1|2>:', cmps1.overlap(cmps2.copy()))
     print('<X|1>:', cmps_X.overlap(cmps1.copy()))
     print('<X|2>:', cmps_X.overlap(cmps2.copy()))
-    cmps1.block_rdm(L//2, L//2+498)
-    cmps2.block_rdm(L//2, L//2+498)
-    cmps_X.block_rdm(L//2, L//2+499)
+#      cmps1.block_rdm(L//2, L//2+498)
+#      cmps2.block_rdm(L//2, L//2+498)
+#      cmps_X.block_rdm(L//2, L//2+499)
 
-    mus = np.linspace(0,np.pi/4,110)
+    mus = np.linspace(0,np.pi/4, 100)
     ws = np.zeros([mus.shape[0], 4]) * 1.j
     Ss = []
-    for i in range(mus.shape[0]):
+    for i in range(0, mus.shape[0]):
 #          probability(cmps1, mus[i])
         S = measurement_entropy(cmps1, mus[i], n=2)
-        print('i {0:<2}'.format(i), 'Sn:', S)
+        print('i {0:<2}'.format(i), 'mu {0:<5}'.format(mus[i]), 'Sn:', S)
         assert S.imag < 1e-10
         Ss.append(S.real)
 
-#      colors = ['r','g','b','k']
-#      plt.plot(mus, Ss, color=colors[0])
-#      plt.xlabel(r'$\mu$')
-#      plt.ylabel(r'$\lambda$')
-#      plt.show()
+    colors = ['r','g','b','k']
+    plt.plot(mus, Ss, color=colors[0])
+    plt.xlabel(r'$\mu$')
+    plt.ylabel(r'$\lambda$')
+    plt.show()
