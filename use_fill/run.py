@@ -86,7 +86,7 @@ if __name__ == '__main__':
     AL, _ = isofill(ALs[0], ALs[0], 2, 1, in_inds=[0,1], new_d=chi, random=False)
     #ALs[0] = AL
     ALs, ARs, ACs, Cs = normalize([AL])
-    np.save('AL', ALs[0])
+#      np.save('AL', ALs[0])
 
 
     rdm = np.tensordot(ACs[0], ACs[0].conj(), [[1,2],[1,2]])

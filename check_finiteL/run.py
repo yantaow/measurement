@@ -24,12 +24,15 @@ import matplotlib.pyplot as plt
 import copy
 
 #--------------------------------------
-def measurement_entropy(cmps, mu, n=2):
+def measurement_entropy(cmps, mu, n=2, x0=0, x1=-1):
     '''
     As : Ground state MPS tensors, in the right canonical form
     mu : measurement strength
     n  : Renyi-index
     '''
+    if x1 < 0:
+        x1 = len(cmps)
+
     L = len(cmps) #unit-cell size
     d = cmps[0].shape[0]
 
@@ -53,11 +56,7 @@ def measurement_entropy(cmps, mu, n=2):
         D_r = cmps[i].shape[2]
         T1      = np.zeros([D_l**2, D_r**2]) * 1.j
         Tn      = np.zeros([D_l**(2*n), D_r**(2*n)]) * 1.j
-#          if i > L//4 and i < 3*L//4:
-#          if i > -1 and i < L:
-#          if i > 3*L//4:
-#          if i < L * 0.3:
-        if i < L-10:
+        if i >= x0 and i < x1:
             l += 1
             for s in range(d): # sum over outcomes
                 MB    = mT(M[s], cmps[i], 0, order='mT')
@@ -93,6 +92,7 @@ def measurement_entropy(cmps, mu, n=2):
 #          print('accum:', accum/l)
 #      print('T1_all:', T1_all)
 #      print('T2_all:', T2_all)
+    print('l:', l)
     return 1/(1-n) * (np.log2(Tn_all[0][0]) + accum)/l
 #--------------------------------------
 def probability(cmps, mu, s='random'):
@@ -141,7 +141,7 @@ print("seed:", seed)
 np.random.seed(seed)
 #--------------------------------------
 if __name__ == '__main__':
-    L = 1000
+    L = 10000
 
     A = np.zeros([2,1,1])
     A[0,0,0] = 1/np.sqrt(2)
@@ -158,8 +158,8 @@ if __name__ == '__main__':
         ALs.append(copy.deepcopy(AL))
     cmps = ColumnMPS(list_tensor=ALs)
 
-    #AL0 = fill_out(A, 2, 2, in_inds=[0,1], out_inds=[2])
-    AL0 = random_isometry([2,1,2], [0,1])
+    AL0 = fill_out(A, 2, 2, in_inds=[0,1], out_inds=[2])
+    #AL0 = random_isometry([2,1,2], [0,1])
     cmps[0] = AL0
 
     cmps1 = cmps.copy()
@@ -168,8 +168,8 @@ if __name__ == '__main__':
     a = 1/np.sqrt(2)
     b = 1/np.sqrt(2)
     r1 = np.zeros([2,1])
-    r1[0,0] = a
-    r1[1,0] = b
+    r1[0,0] = 0
+    r1[1,0] = 1
     cmps1[-1] = mT(r1, cmps1[-1], 2, order='Tm')
 
     r2 = np.zeros([2,1])
@@ -188,9 +188,12 @@ if __name__ == '__main__':
     mus = np.linspace(0,np.pi/4, 100)
     ws = np.zeros([mus.shape[0], 4]) * 1.j
     Ss = []
+    x0 = L//2
+    x1 = 3*L//4 #+ 500
+    print('x0, x1:', x0, x1)
     for i in range(0, mus.shape[0]):
 #          probability(cmps1, mus[i])
-        S = measurement_entropy(cmps1, mus[i], n=2)
+        S = measurement_entropy(cmps1, mus[i], n=2, x0=x0, x1=x1)
         print('i {0:<2}'.format(i), 'mu {0:<5}'.format(mus[i]), 'Sn:', S)
         assert S.imag < 1e-10
         Ss.append(S.real)

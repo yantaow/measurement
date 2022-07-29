@@ -2,9 +2,12 @@
 
 export PYTHONPATH=~/Research/Berkeley/TN:~/Research/Berkeley/TN/tenpy:~/Research/Berkeley/TN/measurement/vumps
 
+
+#   `#seed:`      51      \
+
 time \
   python3 run.py     \
-  `#seed:`      51      \
+  `#seed:`      -1      \
   `#D:`         2      \
   `#u:`         1      
 
