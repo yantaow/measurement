@@ -7,7 +7,7 @@ export PYTHONPATH=~/Research/Berkeley/TN:~/Research/Berkeley/TN/tenpy:~/Research
 
 time \
   python3 run.py     \
-  `#seed:`      -1      \
+  `#seed:`      51      \
   `#D:`         2      \
   `#u:`         1      
 

@@ -36,7 +36,8 @@ def measurement_entropy(As, mu):
     # mu = pi/4 corresponds to a projective measurement
     M[0]    = np.sqrt(0.5)*(np.cos(mu)+np.sin(mu))*P1 + np.sqrt(0.5)*(np.cos(mu)-np.sin(mu))*P0
     M[1]    = np.sqrt(0.5)*(np.cos(mu)-np.sin(mu))*P1 + np.sqrt(0.5)*(np.cos(mu)+np.sin(mu))*P0
-
+#      print('M[0]:\n', M[0])
+#      print('M[1]:\n', M[1])
     T1      = np.zeros([N, chi**2, chi**2]) * 1.j
     T2      = np.zeros([N, chi**4, chi**4]) * 1.j
     for i in range(N): # sum over sites
@@ -86,6 +87,17 @@ if __name__ == '__main__':
     AL, _ = isofill(ALs[0], ALs[0], 2, 1, in_inds=[0,1], new_d=chi, random=False)
     #ALs[0] = AL
     ALs, ARs, ACs, Cs = normalize([AL])
+    print('AL[0]:\n', ALs[0][0])
+    print('AR[1]:\n', ALs[0][1])
+    v1 = ALs[0][0][0][1]
+    v2 = ALs[0][1][0][1]
+    v3 = ALs[0][0][1][1]
+    v4 = ALs[0][1][1][1]
+    v = [v1,v2,v3,v4]
+    print('v:\n', v)
+    print('|v|:', np.linalg.norm(v))
+
+
 #      np.save('AL', ALs[0])
 
 
@@ -101,7 +113,7 @@ if __name__ == '__main__':
     get_gap(ALs, st='ALs', n=5)
 
 
-    mus = np.linspace(0,np.pi/4,110)
+    mus = np.linspace(0,np.pi/4,11)
     ws = np.zeros([mus.shape[0], 4]) * 1.j
 
     Ss = []
@@ -118,4 +130,4 @@ if __name__ == '__main__':
     plt.plot(mus, Ss, color=colors[0])
     plt.xlabel(r'$\mu$')
     plt.ylabel(r'$S2$')
-    plt.show()
+    #plt.show()
